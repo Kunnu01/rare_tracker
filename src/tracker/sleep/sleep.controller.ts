@@ -7,6 +7,7 @@ import {
   Req,
   Delete,
   Param,
+  Patch,
 } from '@nestjs/common'
 import { ApiTags } from '@nestjs/swagger'
 
@@ -30,6 +31,19 @@ export class SleepController {
     }
 
     return this.sleepService.create({ input, userId: user_id })
+  }
+
+  @Patch('/session/:sessionId')
+  update(
+    @Param('sessionId') sessionId: string,
+    @Req() { user_id }: { user_id: string },
+    @Body() input: ICreateSleepSessionInput,
+  ) {
+    if (!sessionId) {
+      throw new BadRequestError('SessionId is required')
+    }
+
+    return this.sleepService.updateSessionById(input, sessionId, user_id)
   }
 
   @Delete('/:sleepId')
@@ -67,13 +81,10 @@ export class SleepController {
 
   @Get()
   getSleepByDate(
-    @Query('date') date: string,
     @Req() { user_id }: { user_id: string },
+    @Query('date') date?: string,
   ) {
-    if (!date) {
-      throw new BadRequestError('Date is required')
-    }
-    return this.sleepService.getSleepByDate(date, user_id)
+    return this.sleepService.getSleepByDate(user_id, date)
   }
 
   @Get('stats/average-of-week')

@@ -11,18 +11,18 @@ import {
 } from '../../util/date'
 import { BadRequestError } from '../../util/error'
 
-import { ICreateSleepSessionInput } from './sleep.input'
+import { ICreateSleepSessionInput, IUpdateSleepSessionInput } from './sleep.input'
 
 @Injectable()
 export class SleepService {
   constructor(private prisma: PrismaService) {}
 
-  async getSleepByDate(date: string, userId: string): Promise<Sleep> {
-    const sleepDate = getDate(date)
+  async getSleepByDate(userId: string, date?: string): Promise<Sleep> {
+    const sleepDate = date && getDate(date)
 
     return this.prisma.sleep.findFirst({
       where: {
-        date: sleepDate,
+        ...(date && { date: sleepDate }),
         userId,
       },
       include: {
@@ -186,6 +186,71 @@ export class SleepService {
     return { message: 'Sleep session deleted successfully' }
   }
 
+  async updateSessionById(input: IUpdateSleepSessionInput, sessionId: string, userId: string) {
+    try {
+      const { startTime, endTime } = input
+
+      if (!startTime && !endTime) {
+        throw new BadRequestError('Missing required fields')
+      }
+      
+      const session = await this.prisma.sleepSession.findFirst({
+        where: {
+          id: sessionId,
+          sleep: {
+            userId,
+          },
+        },
+        include: {
+          sleep: {
+            include: {
+              sessions: true,
+            }
+          },
+        },
+      })
+
+      if (!session) {
+        throw new BadRequestError('Sleep session not found')
+      }
+
+      const sleepDate = session.sleep.date
+      const sessionStartTime = startTime ? getDateFromTime(sleepDate, startTime) : session.startTime
+      const sessionEndTime = endTime ? getDateFromTime(sleepDate, endTime) : session.endTime
+
+      const previousDuration = session.duration
+      const calculatedDuration = getDuration(sessionStartTime, sessionEndTime)
+
+      const diff = calculatedDuration - previousDuration
+
+      const hasOverlap = this.validateOverlap(session.sleep.sessions, sessionStartTime, sessionEndTime)
+
+      if (hasOverlap) {
+        throw new BadRequestError(
+          'Sleep session overlaps with existing sleep session.',
+        )
+      }
+
+      return this.prisma.sleepSession.update({
+        where: { id: sessionId },
+        data: {
+          startTime: sessionStartTime,
+          endTime: sessionEndTime,
+          duration: calculatedDuration,
+          sleep: {
+            update: {
+              totalDuration: session.sleep.totalDuration + diff,
+            }
+          },
+        },
+      })
+      
+    } catch (error) {
+      console.error(error)
+      throw error
+    }
+  }
+
   async create({
     input,
     userId,
@@ -201,18 +266,14 @@ export class SleepService {
       }
 
       const sleepDate = getDate(date)
-      console.log({ sleepDate })
       const sessionStartTime = getDateFromTime(sleepDate, startTime)
-      console.log({ sessionStartTime })
       const sessionEndTime = getDateFromTime(
         sleepDate,
         endTime,
         isNextDay(startTime, endTime),
       )
-      console.log({ sessionEndTime })
       const calculatedDuration = getDuration(sessionStartTime, sessionEndTime)
 
-      console.log({ duration, calculatedDuration })
       if (duration && duration !== calculatedDuration) {
         throw new BadRequestError(
           'Duration you provided does not match sleep timings.',

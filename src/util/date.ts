@@ -5,12 +5,8 @@ export const getDateFromTime = (
 ): Date => {
   const [hours, minutes] = time.split(':').map(Number)
   const givenDate = new Date(date)
-  console.log({ givenDate })
   const newDate = new Date(givenDate.setHours(hours, minutes))
-  console.log({ newDate })
-  console.log({ isNextDay })
   if (isNextDay) {
-    console.log({ getDate: newDate.getDate() })
     return new Date(new Date(newDate).setDate(date.getDate() + 1))
   }
 

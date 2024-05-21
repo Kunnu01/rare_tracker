@@ -8,5 +8,4 @@ export type ICreateSleepSessionInput = {
 export type IUpdateSleepSessionInput = {
   startTime?: string
   endTime?: string
-  duration?: number
 }
