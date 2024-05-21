@@ -1,0 +1,68 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  password  String   @default("")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  sleeps    Sleep[]
+  weights   Weight[]
+
+  @@index([email])
+  @@map("users")
+}
+
+model Sleep {
+  id        String   @id @default(uuid())
+  userId    String
+  date      DateTime
+  totalDuration  Float @map("total_duration")
+
+  sessions  SleepSession[]
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sleeps")
+}
+
+model SleepSession {
+  id       String   @id @default(uuid())
+  startTime DateTime @map("start_time")
+  endTime   DateTime @map("end_time")
+  duration  Float
+  sleepId   String
+
+  sleep     Sleep    @relation(fields: [sleepId], references: [id], onDelete: Cascade)
+
+  @@index([sleepId])
+  @@map("sleep_sessions")
+}
+
+model Weight {
+  id        String   @id @default(uuid())
+  userId    String
+  date      DateTime
+  weight    Float
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("weights")
+}

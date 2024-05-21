@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: rare_tracker
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - postgres_network
+
+
+networks:
+  postgres_network:
+
+volumes:
+  postgres_data:
